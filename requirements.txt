@@ -1,0 +1,14 @@
+# pip install -r requirements.txt
+
+# FastAPI --------------------------------------
+fastapi
+uvicorn
+jinja2
+aiofiles
+python-multipart
+
+# torch --------------------------------------
+torch>=1.7.0
+
+# Other ----------------------------------------
+Pillow

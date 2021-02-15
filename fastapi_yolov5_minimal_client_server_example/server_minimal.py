@@ -1,8 +1,10 @@
 '''
-This file is a barebones FastAPI server that:
+This file is a barebones FastAPI example that:
 	1. Accepts GET request, renders a HTML form at localhost:8000 allowing the user to
 		 upload a image and select YOLO model, then submit that data via POST
 	2. Accept POST request, run YOLO model on input image, return JSON output
+
+Works with client.py
 
 This script does not require any of the HTML templates or other code in this repo
 and does not involve stuff like Bootstrap, JQuery, etc.

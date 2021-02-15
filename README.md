@@ -4,9 +4,6 @@ This is a demo FastAPI app that allows a user to upload an image, perform infere
 
 <img src="https://user-images.githubusercontent.com/47000850/107603157-e05aae00-6bf9-11eb-8c1a-2715fdc27066.png" alt="image" width="630"/>
 
-<img src="https://user-images.githubusercontent.com/47000850/107911503-bae7e000-6f2a-11eb-8be4-cf662608546e.png" alt="image" width="630"/>
-
-
 ## Requirements
 Python 3.8 or later with all requirements.txt dependencies installed, including torch>=1.7 (per https://github.com/ultralytics/yolov5).
 
@@ -22,6 +19,8 @@ You can initialize the server with `python server.py` or `uvicorn server:app --r
 You can test the server using `client.py` or by opening `localhost:8000` in your web browser. You can test the POST requests by going to localhost:8000/docs, clicking on a request and then clicking the "Try It Out" Button.
 
 Models will automatically be downloaded the first time they are used.
+
+<img src="https://user-images.githubusercontent.com/47000850/107911503-bae7e000-6f2a-11eb-8be4-cf662608546e.png" alt="image" width="630"/>
 
 ## Minimal FastAPI Example
 

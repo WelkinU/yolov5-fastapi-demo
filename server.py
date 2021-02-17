@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List
 
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
@@ -9,6 +10,8 @@ from io import BytesIO
 import torch
 import base64
 import random
+
+import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
@@ -18,6 +21,7 @@ app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 
 #for bbox plotting
 colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)]
+
 
 @app.get("/")
 def home(request: Request):
@@ -29,7 +33,10 @@ def home(request: Request):
 			"request": request,
 		})
 
+
 def results_to_json(results, model):
+	''' Converts yolo model output to json (list of list of dicts)
+	'''
 	return [
 				[
 					{
@@ -42,6 +49,7 @@ def results_to_json(results, model):
 				]
 			for result in results.xyxyn
 			]
+
 
 def plot_one_box(xyxy, img, color = (255,255,255), label=None, line_thickness=None):
 	#function based on yolov5/utils/plots.py plot_one_box()
@@ -79,9 +87,10 @@ def plot_one_box(xyxy, img, color = (255,255,255), label=None, line_thickness=No
 		draw.rectangle([xyxy[0],xyxy[1]-txt_height-2, xyxy[0]+txt_width+2, xyxy[1]], fill = color)
 		draw.text((xyxy[0],xyxy[1]-txt_height), label, fill=(255,255,255), font = fnt)
 
+
 @app.post("/")
 async def detect_via_web_form(request: Request,
-							file: UploadFile = File(...), 
+							file_list: List[UploadFile] = File(...), 
 							model_name: str = Form(...)):
 	
 	'''
@@ -95,35 +104,37 @@ async def detect_via_web_form(request: Request,
 	#this can be preloaded to not have to run each time
 	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-	img = Image.open(BytesIO(await file.read()))
+	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
 
-	results = model(img) #get YOLO results on the input image
+	results = model(img_batch.copy()) #get YOLO results on the input image
 	json_results = results_to_json(results,model)
 
+	img_str_list = []
 	#plot bboxes on the image
-	for bbox_list in json_results:
+	for img, bbox_list in zip(img_batch, json_results):
 		for bbox in bbox_list:
 			label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
-			plot_one_box(bbox['normalized_box'], img, label=label, color=colors[int(bbox['class'])], line_thickness=3)
+			plot_one_box(bbox['normalized_box'], img, label=label, 
+					color=colors[int(bbox['class'])], line_thickness=3)
 
-	#base64 encode the image string so we can render it in HTML
-	buffered = BytesIO()
-	img.save(buffered, format="JPEG")
-	img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+		#base64 encode the image so we can render it in HTML
+		buffered = BytesIO()
+		img.save(buffered, format="JPEG")
+		img_str_list.append(base64.b64encode(buffered.getvalue()).decode('utf-8'))
 
-	encoded_json_results=str(json_results).replace("'",r"\'").replace('"',r'\"')
+	#escape the apostrophes in the json string representation
+	encoded_json_results = str(json_results).replace("'",r"\'").replace('"',r'\"')
 
-	print(encoded_json_results)
 	return templates.TemplateResponse('show_results.html', {
 			'request': request,
-			'image_base64': img_str,
-			'bbox_data': json_results,
+			'bbox_image_data_zipped': zip(img_str_list,json_results), #zip here, instead of in jinja2 template
 			'bbox_data_str': encoded_json_results,
 		})
 
+
 @app.post("/detect/")
 async def detect_via_api(request: Request,
-						file: UploadFile = File(...), 
+						file_list: List[UploadFile] = File(...), 
 						model_name: str = Form(...)):
 	
 	'''
@@ -134,11 +145,12 @@ async def detect_via_api(request: Request,
 	#this can be preloaded to not have to run each time
 	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-	results = model(Image.open(BytesIO(await file.read()))) #get YOLO results on the input image
+	results = model([Image.open(BytesIO(await file.read())) for file in file_list])
 	json_results = results_to_json(results,model)
 
 	return json_results
 	
+
 @app.get("/about/")
 def about_us(request: Request):
 	'''
@@ -148,11 +160,11 @@ def about_us(request: Request):
 	return templates.TemplateResponse('about.html', 
 			{"request": request})
 
+
 if __name__ == '__main__':
 	import uvicorn
 	import os.path
 	
 	#make the app string equal to whatever the name of this file is
-	app_str = os.path.splitext(os.path.basename(__file__))[0] + ':app'
-	
+	app_str = 'server:app'
 	uvicorn.run(app_str, host='localhost', port=8000, reload=True, workers=1)

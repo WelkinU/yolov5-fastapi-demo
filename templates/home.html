@@ -1,16 +1,16 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h5>Upload an image and select a YOLOv5 model</h5>
+<h5>Upload image(s) and select a YOLOv5 model</h5>
 
 <hr/>
 
 <form method="post" action="" enctype="multipart/form-data">
   <div class="form-row">
   	<div class="form-group col-md-2">
-      <label>Upload Image</label>
+      <label>Upload Image(s)</label>
     </div>
-    <input name="file" type="file" multiple>
+    <input name="file_list" type="file" multiple>
   </div>
   <div class="form-row">
     <div class="form-group col-md-2">

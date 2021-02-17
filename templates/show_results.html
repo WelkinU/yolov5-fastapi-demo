@@ -2,29 +2,39 @@
 
 {% block content %}
 
-<script>
-  /*
-  $(document).ready(function() {
-    $("#download_results").click(function() {
+<!--Create button that calls the download() function above, use dummy iframe
+to stop the form from redirecting -->
+<iframe name="dummyframe" id="dummyframe" style="display: none;"></iframe>
+<form onsubmit="download('results.json', '{{ bbox_data_str }}')" target="dummyframe">
+  <h2>Results</h2> 
+  <input class="btn btn-primary" type="submit" value="Download Results">
+</form>
 
-      var bbox_data = "{{ bbox_data_str }}";
-      //download('results.txt', bbox_data);
-      
-      $.ajax({
-          url: "/test/",
-          type: 'POST',
-          contentType: 'application/json',
-          data: JSON.stringify({ "bbox_data": "{{ bbox_data_str }}" }),
-          dataType: 'json',
-          success: function(data) {
-            download("results.txt", data.message)
-          }
-      });
-      
-    });
-  
-  });
-  */
+{% for img_base64, bbox_list in bbox_image_data_zipped %}
+<table class="table">
+<thead>
+  <tr>
+    <th>Class</th>
+    <th>Normalized Bounding Box</th>
+    <th>Confidence</th>
+  </tr>
+</thead>
+  {% for bbox in bbox_list %}
+    <tr>
+      <td>{{ bbox['class_name'] }}</td>
+      <td>{{ bbox['normalized_box'] }}</td>
+      <td>{{ bbox['confidence'] }}</td>
+    </tr>
+  {% endfor %}
+</table>
+
+<!--Display base64 encoded image, scale image so it fits browser window horizontally -->
+<img src="data:image/jpeg;charset=utf-8;base64,{{ img_base64 }}" id="result_image" style="max-width: 100%;height: auto;width: auto\9;" />
+
+<hr/>
+{% endfor %}
+
+<script>
   // from https://stackoverflow.com/questions/3665115/how-to-create-a-file-in-memory-for-user-to-download-but-not-through-server/18197341#18197341
   function download(filename, text) {
     var element = document.createElement('a');
@@ -40,34 +50,5 @@
   }
 </script>
 
-<!--Create button that calls the download() function above, use dummy iframe
-to stop the form from redirecting -->
-<iframe name="dummyframe" id="dummyframe" style="display: none;"></iframe>
-<form onsubmit="download('results.json', '{{ bbox_data_str }}')" target="dummyframe">
-  <h2>Results</h2> 
-  <input class="btn btn-primary" type="submit" value="Download Results">
-</form>
-
-<table class="table">
-<thead>
-  <tr>
-    <th>Class</th>
-    <th>Normalized Bounding Box</th>
-    <th>Confidence</th>
-  </tr>
-</thead>
-  {% for bbox_list in bbox_data %}
-    {% for bbox in bbox_list %}
-      <tr>
-        <td>{{ bbox['class_name'] }}</td>
-        <td>{{ bbox['normalized_box'] }}</td>
-        <td>{{ bbox['confidence'] }}</td>
-      </tr>
-    {% endfor %}
-  {% endfor %}
-</table>
-
-<!--Display base64 encoded image, scale image so it fits browser window horizontally -->
-<img src="data:image/jpeg;charset=utf-8;base64,{{ image_base64 }}" id="result_image" style="max-width: 100%;height: auto;width: auto\9;" />
 
 {% endblock %}

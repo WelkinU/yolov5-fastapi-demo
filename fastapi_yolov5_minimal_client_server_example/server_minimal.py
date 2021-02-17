@@ -85,7 +85,5 @@ if __name__ == '__main__':
     import uvicorn
     import os.path
     
-    #make the app string equal to whatever the name of this file is
-    app_str = os.path.splitext(os.path.basename(__file__))[0] + ':app'
-    
+    app_str = 'server_minimal:app'
     uvicorn.run(app_str, host='localhost', port=8000, reload=True, workers=1)

@@ -16,7 +16,25 @@ pip install -r requirements.txt
 
 You can initialize the server with `python server.py` or `uvicorn server:app --reload`
 
-You can test the server using `client.py` or by opening `localhost:8000` in your web browser. Models will automatically be downloaded the first time they are used.
+You can test the server a couple of ways:
+1. Using `client.py` - this is a basic example of using the Requests library to upload the image file + model name to `localhost:8000/detect/` and receive JSON inference results. 
+1. Open `localhost:8000` in your web browser, use the web form to upload an image and select a model, then click submit. You should see inference results displayed in the web browser shortly. 
+1. Open `localhost:8000/docs` in your web browser, clicking on "POST /detect/ Detect Via API" and then click the "Try It Out" button. You should be able to upload files and enter a YOLOv5 model here as well.
+
+Models will automatically be downloaded the first time they are used.
+
+<img src="https://user-images.githubusercontent.com/47000850/107911503-bae7e000-6f2a-11eb-8be4-cf662608546e.png" alt="image" width="630"/>
+
+## API Documentation
+Full Swagger API documentation is auto-generated in `localhost:8000/docs`. The general idea is that humans use the "/" route (HTML form + inference results displayed in the browser) and programs use the "/detect/" API route to receive JSON inference results.
+
+## Minimal FastAPI Example
+
+See the `fastapi_yolov5_minimal_client_server_example` folder for a minimal client/server wrapper of YOLOv5 with FastAPI and HTML forms.
+
+Again, you can try this out by:
+1. Running the server with `python server_minimal.py` or `uvicorn server_minimal:app --reload`
+1. Test the server with `python client_minimal.py`, navigating to `localhost:8000` in your web browser or `localhost:8000/docs -> POST Request -> Try It Out`
 
 ## Credits
 

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
@@ -10,8 +10,6 @@ from io import BytesIO
 import torch
 import base64
 import random
-
-import os
 
 app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
@@ -22,6 +20,8 @@ app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 #for bbox plotting
 colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)]
 
+model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x']
+model_dict = {model_name: None for model_name in model_selection_options}
 
 @app.get("/")
 def home(request: Request):
@@ -31,6 +31,7 @@ def home(request: Request):
 
 	return templates.TemplateResponse('home.html', {
 			"request": request,
+			"model_selection_options": model_selection_options,
 		})
 
 
@@ -91,23 +92,26 @@ def plot_one_box(xyxy, img, color = (255,255,255), label=None, line_thickness=No
 @app.post("/")
 async def detect_via_web_form(request: Request,
 							file_list: List[UploadFile] = File(...), 
-							model_name: str = Form(...)):
+							model_name: str = Form(...),
+							img_size: int = Form(...)):
 	
 	'''
 	Requires an image file upload, model name (ex. yolov5s). Intended for human (non-api) users.
 	Returns: HTML template render showing bbox data and base64 encoded image
 	'''
 
-	#NOTE: Can't use pydantic validation with UploadFile in a single request per
-	#https://github.com/tiangolo/fastapi/issues/657
+	#Not sure how to use pydantic validation with UploadFile in a single request. 
+	#See: https://github.com/tiangolo/fastapi/issues/657
+	if model_name not in model_selection_options:
+		return {"status": "error", "message": "Invalid YOLO model name"}
 
-	#this can be preloaded to not have to run each time
-	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
+	if model_dict[model_name] is None:
+		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
 	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
 
-	results = model(img_batch.copy()) #get YOLO results on the input image
-	json_results = results_to_json(results,model)
+	results = model_dict[model_name](img_batch.copy(), size = img_size) #get YOLO results on the input image
+	json_results = results_to_json(results,model_dict[model_name])
 
 	img_str_list = []
 	#plot bboxes on the image
@@ -135,18 +139,24 @@ async def detect_via_web_form(request: Request,
 @app.post("/detect/")
 async def detect_via_api(request: Request,
 						file_list: List[UploadFile] = File(...), 
-						model_name: str = Form(...)):
+						model_name: str = Form(...),
+						img_size: Optional[int] = Form(640)):
 	
 	'''
 	Requires an image file upload, model name (ex. yolov5s). Intended for API usage.
 	Returns: JSON results of running YOLOv5 on the uploaded image
 	'''
 
-	#this can be preloaded to not have to run each time
-	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
+	if model_name not in model_selection_options:
+		return {"status": "error", "message": "Invalid YOLO model name"}
 
-	results = model([Image.open(BytesIO(await file.read())) for file in file_list])
-	json_results = results_to_json(results,model)
+	if model_dict[model_name] is None:
+		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
+
+	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
+	
+	results = model_dict[model_name](img_batch, size = img_size)
+	json_results = results_to_json(results,model_dict[model_name])
 
 	return json_results
 	
@@ -163,7 +173,15 @@ def about_us(request: Request):
 
 if __name__ == '__main__':
 	import uvicorn
-	import os.path
+	import argparse
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--precache-models', action='store_true', help='pre-cache all models in memory upon initialization')
+	opt = parser.parse_args()
+
+	if opt.precache_models:
+		#pre-load models
+		model_dict = {model_name: torch.hub.load('ultralytics/yolov5', model_name, pretrained=True) 
+						for model_name in model_selection_options}
 	
 	#make the app string equal to whatever the name of this file is
 	app_str = 'server:app'

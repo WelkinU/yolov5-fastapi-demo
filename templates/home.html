@@ -18,13 +18,21 @@
     </div>
     <div class="form-group col-md-2">
       <select class="form-control form-control-sm" name="model_name">
-        <option>yolov5s</option>
-        <option>yolov5m</option>
-        <option>yolov5l</option>
-        <option>yolov5x</option>
+      {% for selection in model_selection_options %}
+        <option>{{ selection }}</option>
+      {% endfor %}
       </select>
     </div>
   </div>
+  <div class="form-row">
+    <div class="form-group col-md-2">
+      <label>Model Inference Size</label>
+    </div>
+    <div class="form-group col-md-2">
+      <input type="text" class="form-control" name="img_size" value="640">
+    </div>
+  </div>
+
   <button class="btn btn-primary" type="submit">Submit</button>
 </form>
 

@@ -6,8 +6,8 @@ This file is a barebones FastAPI example that:
 
 Works with client.py
 
-This script does not require any of the HTML templates or other code in this repo
-and does not involve stuff like Bootstrap, JQuery, etc.
+This script does not require any of the HTML templates in /templates or other code in this repo
+and does not involve stuff like Bootstrap, Javascript, JQuery, etc.
 
 '''
 
@@ -68,12 +68,9 @@ async def process_home_form(file: UploadFile = File(...),
 	
 	'''
 	Requires an image file upload, model name (ex. yolov5s).
-	Returns: json response with list of dicts. 
+	Returns: json response with list of list of dicts.
 		Each dict contains class, class_name, confidence, normalized_bbox
 	'''
-
-	#NOTE: Can't use pydantic validation with UploadFile in a single request per
-	#https://github.com/tiangolo/fastapi/issues/657
 
 	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
@@ -83,7 +80,6 @@ async def process_home_form(file: UploadFile = File(...),
 
 if __name__ == '__main__':
     import uvicorn
-    import os.path
     
     app_str = 'server_minimal:app'
     uvicorn.run(app_str, host='localhost', port=8000, reload=True, workers=1)

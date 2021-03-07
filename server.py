@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Request, Form, File, UploadFile
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError, validator
 from typing import List, Optional
 
 from PIL import Image, ImageDraw, ImageFont
@@ -89,22 +90,56 @@ def plot_one_box(xyxy, img, color = (255,255,255), label=None, line_thickness=No
 		draw.text((xyxy[0],xyxy[1]-txt_height), label, fill=(255,255,255), font = fnt)
 
 
+class YOLORequest(BaseModel):
+	''' Class used for pydantic validation 
+	Documentation: https://pydantic-docs.helpmanual.io/usage/validators/
+	'''
+	model_name: str
+	img_size: int
+
+	@validator('model_name')
+	def validate_model_name(cls, v):
+		assert v in model_selection_options, f'Invalid model name. Valid options: {model_selection_options}'
+		return v
+
+	@validator('img_size')
+	def validate_img_size(cls, v):
+		assert v%32 == 0 and v>0, f'Invalid inference size. Must be multiple of 32 and greater than 0.'
+		return v	
+
+
 @app.post("/")
 async def detect_via_web_form(request: Request,
 							file_list: List[UploadFile] = File(...), 
 							model_name: str = Form(...),
-							img_size: int = Form(...)):
+							img_size: int = Form(640)):
 	
 	'''
-	Requires an image file upload, model name (ex. yolov5s). Intended for human (non-api) users.
+	Requires an image file upload, model name (ex. yolov5s). Optional image size parameter (Default 640).
+	Intended for human (non-api) users.
 	Returns: HTML template render showing bbox data and base64 encoded image
 	'''
 
-	#Not sure how to use pydantic validation with UploadFile in a single request. 
-	#See: https://github.com/tiangolo/fastapi/issues/657
-	if model_name not in model_selection_options:
-		return {"status": "error", "message": "Invalid YOLO model name"}
+	''' Notes on Pydantic validation:
+	Objective here:
+	1. Use a response model that works on multipart form data
+	2. Use Pydantic to validate the data with validators
+	3. Don't throw an uncaught Validation error from Pydantic that causes 
+		Internal Server Error response (error code 500)
 
+	Pydantic Response models using several methods from below link don't work because data is multipart form data:
+	https://github.com/tiangolo/fastapi/issues/1989
+	multipart form data doesn't work with Pydantic per: 
+	https://github.com/tiangolo/fastapi/issues/285#issuecomment-498368734
+
+	The try-except method below was the only way I found that could accomplish all the above.
+	'''
+	try:
+		yr = YOLORequest(model_name = model_name, img_size = img_size)		
+	except ValidationError as e:
+		return JSONResponse(content=e.errors(), status_code = 422)
+
+	#assume input validated properly if we got here
 	if model_dict[model_name] is None:
 		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
@@ -140,23 +175,50 @@ async def detect_via_web_form(request: Request,
 async def detect_via_api(request: Request,
 						file_list: List[UploadFile] = File(...), 
 						model_name: str = Form(...),
-						img_size: Optional[int] = Form(640)):
+						img_size: Optional[int] = Form(640),
+						download_image: Optional[bool] = Form(False)):
 	
 	'''
-	Requires an image file upload, model name (ex. yolov5s). Intended for API usage.
+	Requires an image file upload, model name (ex. yolov5s). 
+	Optional image size parameter (Default 640)
+	Optional download_image parameter that includes base64 encoded image(s) with bbox's drawn in the json response
 	Returns: JSON results of running YOLOv5 on the uploaded image
-	'''
 
-	if model_name not in model_selection_options:
-		return {"status": "error", "message": "Invalid YOLO model name"}
+	Intended for API usage.
+	'''
+	try:
+		yr = YOLORequest(model_name = model_name, img_size = img_size)
+	except ValidationError as e:
+		return JSONResponse(content=e.errors(), status_code = 422)
 
 	if model_dict[model_name] is None:
 		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
 	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
 	
-	results = model_dict[model_name](img_batch, size = img_size)
-	json_results = results_to_json(results,model_dict[model_name])
+	if download_image:
+		results = model_dict[model_name](img_batch.copy(), size = img_size)
+		json_results = results_to_json(results,model_dict[model_name])
+
+		for idx, (img, bbox_list) in enumerate(zip(img_batch, json_results)):
+			for bbox in bbox_list:
+				label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
+				plot_one_box(bbox['normalized_box'], img, label=label, 
+						color=colors[int(bbox['class'])], line_thickness=3)
+
+			#base64 encode the image so we can render it in HTML
+			buffered = BytesIO()
+			img.save(buffered, format="JPEG")
+
+			payload = {'image_base64':base64.b64encode(buffered.getvalue()).decode('utf-8'),
+						'width': img.size[0],
+						'height': img.size[1]}
+			json_results[idx].append(payload)
+
+	else:
+		#if we're not downloading the image with bboxes drawn on it, don't do img_batch.copy()
+		results = model_dict[model_name](img_batch, size = img_size)
+		json_results = results_to_json(results,model_dict[model_name])
 
 	return json_results
 	

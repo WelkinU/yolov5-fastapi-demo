@@ -123,7 +123,7 @@ async def detect_via_web_form(request: Request,
 	''' Notes on Pydantic validation:
 	Objective here:
 	1. Use a response model that works on multipart form data
-	2. Use Pydantic to validate the data with validators
+	2. Use Pydantic to validate the data with @validators
 	3. Don't throw an uncaught Validation error from Pydantic that causes 
 		Internal Server Error response (error code 500)
 
@@ -143,7 +143,11 @@ async def detect_via_web_form(request: Request,
 	if model_dict[model_name] is None:
 		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
+	img_batch = []
+	for i, file in enumerate(file_list):
+		img = Image.open(BytesIO(await file.read()))
+		img.filename = f'image{i}.jpg' #for https://github.com/WelkinU/yolov5-fastapi-demo/issues/5
+		img_batch.append(img)
 
 	results = model_dict[model_name](img_batch.copy(), size = img_size) #get YOLO results on the input image
 	json_results = results_to_json(results,model_dict[model_name])
@@ -182,7 +186,9 @@ async def detect_via_api(request: Request,
 	Requires an image file upload, model name (ex. yolov5s). 
 	Optional image size parameter (Default 640)
 	Optional download_image parameter that includes base64 encoded image(s) with bbox's drawn in the json response
-	Returns: JSON results of running YOLOv5 on the uploaded image
+	
+	Returns: JSON results of running YOLOv5 on the uploaded image. If download_image parameter is True, images with
+			bboxes drawn are base64 encoded and returned inside the json response.
 
 	Intended for API usage.
 	'''
@@ -194,7 +200,11 @@ async def detect_via_api(request: Request,
 	if model_dict[model_name] is None:
 		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-	img_batch = [Image.open(BytesIO(await file.read())) for file in file_list]
+	img_batch = []
+	for i, file in enumerate(file_list):
+		img = Image.open(BytesIO(await file.read()))
+		img.filename = f'image{i}.jpg' #for https://github.com/WelkinU/yolov5-fastapi-demo/issues/5
+		img_batch.append(img)
 	
 	if download_image:
 		results = model_dict[model_name](img_batch.copy(), size = img_size)

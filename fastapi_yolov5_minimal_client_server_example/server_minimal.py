@@ -49,6 +49,7 @@ def home(request: Request):
 	return HTMLResponse(content=html_content, status_code=200)
 
 def results_to_json(results, model):
+    ''' Helper function for process_home_form()'''
     return [
         [
             {
@@ -59,7 +60,8 @@ def results_to_json(results, model):
             }
             for pred in result
         ]
-        for result in results.xyxyn
+        #switch this to results.xyxy to get bbox pixels
+        for result in results.xyxyn 
     ]
 
 @app.post("/")
@@ -74,7 +76,12 @@ async def process_home_form(file: UploadFile = File(...),
 
 	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
+  #This is how you decode + process image with PIL
 	results = model( Image.open(BytesIO(await file.read())))
+
+  #This is how you decode + process image with OpenCV
+  #results = model(cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR))
+
 	json_results = results_to_json(results,model)
 	return json_results
 

@@ -15,14 +15,14 @@ to stop the form from redirecting -->
 <thead>
   <tr>
     <th>Class</th>
-    <th>Normalized Bounding Box</th>
+    <th>Bounding Box [x1, y1, x2, y2]</th>
     <th>Confidence</th>
   </tr>
 </thead>
   {% for bbox in bbox_list %}
     <tr>
       <td>{{ bbox['class_name'] }}</td>
-      <td>{{ bbox['normalized_box'] }}</td>
+      <td>{{ bbox['bbox'] }}</td>
       <td>{{ bbox['confidence'] }}</td>
     </tr>
   {% endfor %}

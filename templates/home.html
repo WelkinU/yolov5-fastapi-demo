@@ -6,31 +6,23 @@
 <hr/>
 
 <form method="post" action="" enctype="multipart/form-data">
-  <div class="form-row">
-  	<div class="form-group col-md-2">
-      <label>Upload Image(s)</label>
-    </div>
-    <input name="file_list" type="file" multiple>
+  <div class="mb-3">
+    <label for="file_list" class="form-label">Upload Images</label>
+    <input class="form-control w-auto" type="file" name="file_list" id="file_list" multiple>
   </div>
-  <div class="form-row">
-    <div class="form-group col-md-2">
+  <div class="mb-3">
+    <div class="form-group">
       <label>Select YOLO Model</label>
     </div>
-    <div class="form-group col-md-2">
-      <select class="form-control form-control-sm" name="model_name">
+    <select class="form-select w-auto" name="model_name">
       {% for selection in model_selection_options %}
-        <option>{{ selection }}</option>
-      {% endfor %}
-      </select>
-    </div>
+        <option value="{{ selection }}">{{ selection }}</option>
+      {% endfor %}      
+    </select>
   </div>
-  <div class="form-row">
-    <div class="form-group col-md-2">
-      <label>Model Inference Size</label>
-    </div>
-    <div class="form-group col-md-2">
-      <input type="text" class="form-control" name="img_size" value="640">
-    </div>
+  <div class="mb-3">
+    <label for="img_size_input" class="form-label">Model Inference Size</label>
+    <input type="text" class="form-control w-auto" id="img_size_input" name="img_size" value="640">
   </div>
 
   <button class="btn btn-primary" type="submit">Submit</button>

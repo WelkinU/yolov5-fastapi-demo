@@ -13,11 +13,10 @@ import random
 app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
 
-#for bbox plotting
-colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)]
-
 model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x']
 model_dict = {model_name: None for model_name in model_selection_options} #set up model cache
+
+colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)] #for bbox plotting
 
 ##############################################
 #-------------GET Request Routes--------------
@@ -141,8 +140,7 @@ async def detect_via_api(request: Request,
 ##############################################
 
 def results_to_json(results, model):
-	''' Converts yolo model output to json (list of list of dicts)
-	'''
+	''' Converts yolo model output to json (list of list of dicts)'''
 	return [
 				[
 					{
@@ -173,6 +171,7 @@ def plot_one_box(x, im, color=(128, 128, 128), label=None, line_thickness=3):
 
 
 def base64EncodeImage(img):
+	''' Takes an input image and returns a base64 encoded string representation of that image (jpg format)'''
 	_, im_arr = cv2.imencode('.jpg', img)
 	im_b64 = base64.b64encode(im_arr.tobytes()).decode('utf-8')
 
@@ -186,7 +185,6 @@ if __name__ == '__main__':
 	opt = parser.parse_args()
 
 	if opt.precache_models:
-		#pre-load models
 		model_dict = {model_name: torch.hub.load('ultralytics/yolov5', model_name, pretrained=True) 
 						for model_name in model_selection_options}
 	

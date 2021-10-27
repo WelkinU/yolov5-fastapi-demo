@@ -181,7 +181,9 @@ if __name__ == '__main__':
 	import uvicorn
 	import argparse
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--precache-models', action='store_true', help='pre-cache all models in memory upon initialization')
+	parser.add_argument('--host', default = 'localhost')
+	parser.add_argument('--port', default = 8000)
+	parser.add_argument('--precache-models', action='store_true', help='Pre-cache all models in memory upon initialization, otherwise dynamically caches models')
 	opt = parser.parse_args()
 
 	if opt.precache_models:
@@ -189,4 +191,4 @@ if __name__ == '__main__':
 						for model_name in model_selection_options}
 	
 	app_str = 'server:app' #make the app string equal to whatever the name of this file is
-	uvicorn.run(app_str, host='localhost', port=8000, reload=True, workers=1)
+	uvicorn.run(app_str, host= opt.host, port=opt.port, reload=True)

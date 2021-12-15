@@ -111,7 +111,7 @@ async def detect_via_api(request: Request,
 	if model_dict[model_name] is None:
 		model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-	img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)
+	img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)[:,:,::-1] # BGR TO RGB
 					for file in file_list]
 	
 	if download_image:
@@ -120,6 +120,7 @@ async def detect_via_api(request: Request,
 		json_results = results_to_json(results,model_dict[model_name])
 
 		for idx, (img, bbox_list) in enumerate(zip(img_batch, json_results)):
+			img = img[:,:,::-1] # RGB TO BGR
 			for bbox in bbox_list:
 				label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
 				plot_one_box(bbox['bbox'], img, label=label, 

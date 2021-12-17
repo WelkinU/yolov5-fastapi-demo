@@ -17,12 +17,16 @@ from fastapi.responses import HTMLResponse
 
 from PIL import Image
 from io import BytesIO
+
 import torch
+
+#import cv2
+#import numpy as np
 
 app = FastAPI()
 
 @app.get("/")
-def home(request: Request):
+async def home(request: Request):
 	'''
 	Returns barebones HTML form allowing the user to select a file and model
 	'''
@@ -48,42 +52,44 @@ def home(request: Request):
 
 	return HTMLResponse(content=html_content, status_code=200)
 
-def results_to_json(results, model):
-    ''' Helper function for process_home_form()'''
-    return [
-        [
-            {
-                "class": int(pred[5]),
-                "class_name": model.model.names[int(pred[5])],
-                "normalized_box": pred[:4].tolist(),
-                "confidence": float(pred[4]),
-            }
-            for pred in result
-        ]
-        #switch this to results.xyxy to get bbox pixels
-        for result in results.xyxyn 
-    ]
 
 @app.post("/")
 async def process_home_form(file: UploadFile = File(...), 
 							model_name: str = Form(...)):
 	
-	'''
-	Requires an image file upload, model name (ex. yolov5s).
-	Returns: json response with list of list of dicts.
-		Each dict contains class, class_name, confidence, normalized_bbox
-	'''
+    '''
+    Requires an image file upload, model name (ex. yolov5s).
+    Returns: json response with list of list of dicts.
+    	Each dict contains class, class_name, confidence, normalized_bbox
+    '''
 
-	model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
+    model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True, force_reload = False)
 
-  #This is how you decode + process image with PIL
-	results = model( Image.open(BytesIO(await file.read())))
+    #This is how you decode + process image with PIL
+    results = model(Image.open(BytesIO(await file.read())))
 
-  #This is how you decode + process image with OpenCV
-  #results = model(cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR))
+    #This is how you decode + process image with OpenCV
+    #results = model(cv2.cvtColor(cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR), cv2.COLOR_RGB2BGR))
 
-	json_results = results_to_json(results,model)
-	return json_results
+    json_results = results_to_json(results,model)
+    return json_results
+
+
+def results_to_json(results, model):
+    ''' Helper function for process_home_form()'''
+    return [
+        [
+          {
+          "class": int(pred[5]),
+          "class_name": model.model.names[int(pred[5])],
+          "bbox": [int(x) for x in pred[:4].tolist()], #convert bbox results to int from float
+          "confidence": float(pred[4]),
+          }
+        for pred in result
+        ]
+      for result in results.xyxy
+      ]
+
 
 if __name__ == '__main__':
     import uvicorn

@@ -65,8 +65,11 @@ async def detect_via_web_form(request: Request,
 	img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)
 					for file in file_list]
 
-	#.copy() because the images are modified when running model, and we need originals when drawing bboxes later
-	results = model_dict[model_name](img_batch.copy(), size = img_size)
+	#create a copy that corrects for cv2.imdecode generating BGR images instead of RGB
+	#using cvtColor instead of [...,::-1] to keep array contiguous in RAM
+	img_batch_rgb = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in img_batch]
+
+	results = model_dict[model_name](img_batch_rgb, size = img_size)
 
 	json_results = results_to_json(results,model_dict[model_name])
 
@@ -113,12 +116,15 @@ async def detect_via_api(request: Request,
 
 	img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)
 					for file in file_list]
-	
-	if download_image:
-		#.copy() because the images are modified when running model, and we need originals when drawing bboxes later
-		results = model_dict[model_name](img_batch.copy(), size = img_size) 
-		json_results = results_to_json(results,model_dict[model_name])
 
+	#create a copy that corrects for cv2.imdecode generating BGR images instead of RGB, 
+	#using cvtColor instead of [...,::-1] to keep array contiguous in RAM
+	img_batch_rgb = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in img_batch]
+	
+	results = model_dict[model_name](img_batch_rgb, size = img_size) 
+	json_results = results_to_json(results,model_dict[model_name])
+
+	if download_image:
 		for idx, (img, bbox_list) in enumerate(zip(img_batch, json_results)):
 			for bbox in bbox_list:
 				label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
@@ -127,11 +133,6 @@ async def detect_via_api(request: Request,
 
 			payload = {'image_base64':base64EncodeImage(img)}
 			json_results[idx].append(payload)
-
-	else:
-		#if we're not downloading the image with bboxes drawn on it, don't do img_batch.copy()
-		results = model_dict[model_name](img_batch, size = img_size)
-		json_results = results_to_json(results,model_dict[model_name])
 
 	return json_results
 	

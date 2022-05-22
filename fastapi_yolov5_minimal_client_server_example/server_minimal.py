@@ -4,7 +4,7 @@ This file is a barebones FastAPI example that:
      upload a image and select YOLO model, then submit that data via POST
   2. Accept POST request, run YOLO model on input image, return JSON output
 
-Works with client.py
+Works with client_minimal.py
 
 This script does not require any of the HTML templates in /templates or other code in this repo
 and does not involve stuff like Bootstrap, Javascript, JQuery, etc.
@@ -20,16 +20,11 @@ from io import BytesIO
 
 import torch
 
-#import cv2
-#import numpy as np
-
 app = FastAPI()
 
 @app.get("/")
 async def home(request: Request):
-  '''
-  Returns barebones HTML form allowing the user to select a file and model
-  '''
+  ''' Returns barebones HTML form allowing the user to select a file and model '''
 
   html_content = '''
 <form method="post" enctype="multipart/form-data">
@@ -68,7 +63,7 @@ async def process_home_form(file: UploadFile = File(...),
     #This is how you decode + process image with PIL
     results = model(Image.open(BytesIO(await file.read())))
 
-    #This is how you decode + process image with OpenCV
+    #This is how you decode + process image with OpenCV + numpy
     #results = model(cv2.cvtColor(cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR), cv2.COLOR_RGB2BGR))
 
     json_results = results_to_json(results,model)

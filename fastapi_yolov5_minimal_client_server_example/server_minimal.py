@@ -1,8 +1,8 @@
 '''
 This file is a barebones FastAPI example that:
-	1. Accepts GET request, renders a HTML form at localhost:8000 allowing the user to
-		 upload a image and select YOLO model, then submit that data via POST
-	2. Accept POST request, run YOLO model on input image, return JSON output
+  1. Accepts GET request, renders a HTML form at localhost:8000 allowing the user to
+     upload a image and select YOLO model, then submit that data via POST
+  2. Accept POST request, run YOLO model on input image, return JSON output
 
 Works with client.py
 
@@ -27,11 +27,11 @@ app = FastAPI()
 
 @app.get("/")
 async def home(request: Request):
-	'''
-	Returns barebones HTML form allowing the user to select a file and model
-	'''
+  '''
+  Returns barebones HTML form allowing the user to select a file and model
+  '''
 
-	html_content = '''
+  html_content = '''
 <form method="post" enctype="multipart/form-data">
   <div>
     <label>Upload Image</label>
@@ -50,17 +50,17 @@ async def home(request: Request):
 </form>
 '''
 
-	return HTMLResponse(content=html_content, status_code=200)
+  return HTMLResponse(content=html_content, status_code=200)
 
 
 @app.post("/")
 async def process_home_form(file: UploadFile = File(...), 
-							model_name: str = Form(...)):
-	
+              model_name: str = Form(...)):
+  
     '''
     Requires an image file upload, model name (ex. yolov5s).
     Returns: json response with list of list of dicts.
-    	Each dict contains class, class_name, confidence, normalized_bbox
+      Each dict contains class, class_name, confidence, normalized_bbox
     '''
 
     model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True, force_reload = False)

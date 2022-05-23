@@ -13,7 +13,8 @@ import random
 app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
 
-model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x']
+model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x','yolov5n',
+                            'yolov5n6','yolov5s6','yolov5m6','yolov5l6','yolov5x6']
 model_dict = {model_name: None for model_name in model_selection_options} #set up model cache
 
 colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)] #for bbox plotting
@@ -184,7 +185,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', default = 'localhost')
     parser.add_argument('--port', default = 8000)
-    parser.add_argument('--precache-models', action='store_true', help='Pre-cache all models in memory upon initialization, otherwise dynamically caches models')
+    parser.add_argument('--precache-models', action='store_true', 
+            help='Pre-cache all models in memory upon initialization, otherwise dynamically caches models')
     opt = parser.parse_args()
 
     if opt.precache_models:

@@ -34,7 +34,7 @@ def home(request: Request):
         })
 
 
-@app.get("/about/")
+@app.get("/about")
 def about_us(request: Request):
     '''
     Display about us page
@@ -48,10 +48,10 @@ def about_us(request: Request):
 #------------POST Request Routes--------------
 ##############################################
 @app.post("/")
-async def detect_via_web_form(request: Request,
-                            file_list: List[UploadFile] = File(...), 
-                            model_name: str = Form(...),
-                            img_size: int = Form(640)):
+def detect_via_web_form(request: Request,
+                        file_list: List[UploadFile] = File(...), 
+                        model_name: str = Form(...),
+                        img_size: int = Form(640)):
     
     '''
     Requires an image file upload, model name (ex. yolov5s). Optional image size parameter (Default 640).
@@ -63,7 +63,7 @@ async def detect_via_web_form(request: Request,
     if model_dict[model_name] is None:
         model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-    img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)
+    img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
                     for file in file_list]
 
     #create a copy that corrects for cv2.imdecode generating BGR images instead of RGB
@@ -94,12 +94,12 @@ async def detect_via_web_form(request: Request,
         })
 
 
-@app.post("/detect/")
-async def detect_via_api(request: Request,
-                        file_list: List[UploadFile] = File(...), 
-                        model_name: str = Form(...),
-                        img_size: Optional[int] = Form(640),
-                        download_image: Optional[bool] = Form(False)):
+@app.post("/detect")
+def detect_via_api(request: Request,
+                file_list: List[UploadFile] = File(...), 
+                model_name: str = Form(...),
+                img_size: Optional[int] = Form(640),
+                download_image: Optional[bool] = Form(False)):
     
     '''
     Requires an image file upload, model name (ex. yolov5s). 
@@ -115,7 +115,7 @@ async def detect_via_api(request: Request,
     if model_dict[model_name] is None:
         model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
-    img_batch = [cv2.imdecode(np.fromstring(await file.read(), np.uint8), cv2.IMREAD_COLOR)
+    img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
                     for file in file_list]
 
     #create a copy that corrects for cv2.imdecode generating BGR images instead of RGB, 

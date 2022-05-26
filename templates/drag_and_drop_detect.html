@@ -10,7 +10,6 @@ Bounding box labels' height above the bounding box are adjusted to not overlap
 with eachother in complicated scenes (such as a busy city street).
 
 TODO:
-  - All boxes are yellow right now: introduce color scheme (maybe copy Detectron2's COCO colormap?)
   - Improve efficiency of the algorithm for making box labels not overlap in crowded scenes
 -->
 
@@ -19,7 +18,7 @@ TODO:
 {% block title %} <title>YOLOv5 Drag & Drop Demo</title> {% endblock %}
 
 {% block content %}
-
+<div style="overflow-x: hidden;">
   <div class="row">
     <div class="col-auto m-2">
       <label for="model_name" class="form-label"><b>Select YOLOv5 Model</b></label>
@@ -45,17 +44,22 @@ TODO:
   </div>
   
   <!-- Our image + bboxes will be drawn here! Downscale image to fit page width-->
-  <canvas id="canvas" style="max-width: 100%; height: auto;"></canvas>
-</body style="overflow: visible;">
+  <canvas id="canvas" style="max-width: 99%; height: auto;"></canvas>
+</div>
 
 <script type="text/javascript">
-  /*This script block handles canvas updates after getting bboxes from the server.
-  */
+  /*This script block handles canvas updates after getting bboxes from the server. */
 
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   var image = new Image(60, 45); // Using optional size for image
   image.onload = drawImageWithBBoxes; // Draw when image has loaded
+
+  var colormap = {
+    "car": [255,216,0], //yellow
+    "person": [255,0,0], //red
+    "truck": [255,0,255], //purple
+  };
 
   var data; //list of list of dictionaries obtained from server's /detect endpoint
 
@@ -72,9 +76,20 @@ TODO:
     ctx.font = '24px arial';
     ctx.strokeStyle = 'yellow';
     textboxlocations = [];
+    FILL_ALPHA = 1;
 
+    const randomBetween = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
     for (const item of data){
-      ctx.fillStyle = 'yellow';
+      if(item['class_name'] in colormap) {
+        rgb = colormap[item['class_name']]
+      } else {
+        //random color for this class
+        rgb = [randomBetween(0, 255), randomBetween(0, 255), randomBetween(0, 255)];
+        colormap[item['class_name']] = rgb
+      }
+      ctx.fillStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${FILL_ALPHA})`;
+      ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${FILL_ALPHA})`;
+      
       // draw bbox
       ctx.strokeRect(item['bbox'][0],item['bbox'][1],item['bbox'][2]-item['bbox'][0],item['bbox'][3]-item['bbox'][1]);
      
@@ -104,10 +119,15 @@ TODO:
       ctx.fillRect(x,y,w,h);
 
       //draw text
-      ctx.fillStyle = 'black';
+      if(rgb[0] + rgb[1] + rgb[2] > 255 * 3 / 2) {
+        ctx.fillStyle = 'black';
+      } else {
+        ctx.fillStyle = 'white';
+      }
       ctx.fillText(label, x + padding, y + h - padding);
 
       //draw line between text and bbox top left corner
+      
       ctx.beginPath();
       ctx.moveTo(x,y);
       ctx.lineTo(x, item['bbox'][1]);

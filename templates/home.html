@@ -7,31 +7,33 @@ Implements a simple Bootstrap 5 form submission interface for YOLOv5 detection.
 {% block title %} <title>YOLOv5 Demo</title> {% endblock %}
 
 {% block content %}
-<h5>Upload image(s) and select a YOLOv5 model</h5>
+<div class="m-2">
+  <h5>Upload image(s) and select a YOLOv5 model</h5>
 
-<hr/>
+  <hr/>
 
-<form method="post" action="" enctype="multipart/form-data">
-  <div class="mb-3">
-    <label for="file_list" class="form-label">Upload Images</label>
-    <input class="form-control w-auto" type="file" name="file_list" id="file_list" multiple>
-  </div>
-  <div class="mb-3">
-    <div class="form-group">
-      <label>Select YOLO Model</label>
+  <form method="post" action="" enctype="multipart/form-data">
+    <div class="my-2">
+      <label for="file_list" class="form-label">Upload Images</label>
+      <input class="form-control w-auto" type="file" name="file_list" id="file_list" multiple>
     </div>
-    <select class="form-select w-auto" name="model_name">
-      {% for selection in model_selection_options %}
-        <option value="{{ selection }}">{{ selection }}</option>
-      {% endfor %}      
-    </select>
-  </div>
-  <div class="mb-3">
-    <label for="img_size_input" class="form-label">Model Inference Size</label>
-    <input type="text" class="form-control w-auto" id="img_size_input" name="img_size" value="640">
-  </div>
+    <div class="my-2">
+      <div class="form-group">
+        <label>Select YOLO Model</label>
+      </div>
+      <select class="form-select w-auto" name="model_name">
+        {% for selection in model_selection_options %}
+          <option value="{{ selection }}">{{ selection }}</option>
+        {% endfor %}      
+      </select>
+    </div>
+    <div class="my-2">
+      <label for="img_size_input" class="form-label">Model Inference Size</label>
+      <input type="text" class="form-control w-auto" id="img_size_input" name="img_size" value="640">
+    </div>
 
-  <button class="btn btn-primary" type="submit">Submit</button>
-</form>
+    <button class="btn btn-primary" type="submit">Submit</button>
+  </form>
+</div>
 
 {% endblock %}

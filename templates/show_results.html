@@ -6,8 +6,10 @@
 to stop the form from redirecting -->
 <iframe name="dummyframe" id="dummyframe" style="display: none;"></iframe>
 <form onsubmit="download('results.json', '{{ bbox_data_str }}')" target="dummyframe">
-  <h2>Results</h2> 
-  <input class="btn btn-primary" type="submit" value="Download Results">
+  <div class="d-flex">
+    <div class="d-inline-block ml-1 mr-3 py-1"><h2>Results</h2></div>
+    <div class="d-inline-block mx-3 py-1"><input class="btn btn-primary" type="submit" value="Download Results"></div>
+  </div>
 </form>
 
 {% for img_base64, bbox_list in bbox_image_data_zipped %}

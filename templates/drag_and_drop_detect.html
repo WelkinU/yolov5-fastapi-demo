@@ -1,0 +1,304 @@
+<!-- This is a Jinja2 Template that extends layout.html
+Implements a drag & drop file upload interface for YOLOv5 detection.
+
+Once a user image is uploaded, this code AJAX requests the image, model name
+and image size to the FastAPI server's /detect endpoint. The server sends
+the list of bounding boxes back, and the image + bounding boxes + labels
+are rendered inside the canvas element.
+
+Bounding box labels' height above the bounding box are adjusted to not overlap
+with eachother in complicated scenes (such as a busy city street).
+
+TODO:
+  - All boxes are yellow right now: introduce color scheme (maybe copy Detectron2's COCO colormap?)
+  - Improve efficiency of the algorithm for making box labels not overlap in crowded scenes
+-->
+
+{% extends "layout.html" %}
+
+{% block title %} <title>YOLOv5 Drag & Drop Demo</title> {% endblock %}
+
+{% block content %}
+
+  <div class="row">
+    <div class="col-auto m-2">
+      <label for="model_name" class="form-label"><b>Select YOLOv5 Model</b></label>
+      <select class="form-select" id="model_name" name="model_name">
+        {% for selection in model_selection_options %}
+          <option value="{{ selection }}">{{ selection }}</option>
+        {% endfor %}      
+      </select>
+      <label for="img_size" class="form-label"><b>Model Inference Size</b></label>
+      <input type="text" class="form-control" id="img_size" name="img_size" value="640">
+    </div>
+    
+    <div class="col">
+      <!-- Drag and drop images in this div -->
+      <div class="m-2" id="drop-region" style="border: 3px dashed limegreen; height: 150px;">
+        <div class="container-fluid">
+          <div class="d-flex justify-content-center align-items-center h-100">
+            <b>Drag & Drop Images Or Click To Upload</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Our image + bboxes will be drawn here! Downscale image to fit page width-->
+  <canvas id="canvas" style="max-width: 100%; height: auto;"></canvas>
+</body style="overflow: visible;">
+
+<script type="text/javascript">
+  /*This script block handles canvas updates after getting bboxes from the server.
+  */
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  var image = new Image(60, 45); // Using optional size for image
+  image.onload = drawImageWithBBoxes; // Draw when image has loaded
+
+  var data; //list of list of dictionaries obtained from server's /detect endpoint
+
+  function drawImageWithBBoxes() {
+    // Use the intrinsic size of image in CSS pixels for the canvas element
+    canvas.width = this.naturalWidth;
+    canvas.height = this.naturalHeight;
+
+    //draw the image
+    ctx.drawImage(this, 0, 0);
+    
+    //draw some bboxes!
+    ctx.lineWidth = 2;
+    ctx.font = '24px arial';
+    ctx.strokeStyle = 'yellow';
+    textboxlocations = [];
+
+    for (const item of data){
+      ctx.fillStyle = 'yellow';
+      // draw bbox
+      ctx.strokeRect(item['bbox'][0],item['bbox'][1],item['bbox'][2]-item['bbox'][0],item['bbox'][3]-item['bbox'][1]);
+     
+      let label = `${item['class_name']} ${do_rounding(item['confidence'])}`;
+      let textMeasures = ctx.measureText(label);
+      let textHeight = textMeasures.actualBoundingBoxAscent + textMeasures.actualBoundingBoxDescent;
+      let padding = 2;
+
+      let x = item['bbox'][0];
+      let y = item['bbox'][1] - textHeight - 2 * padding;
+      let w = textMeasures.width + 2 * padding;
+      let h = textHeight + 2 * padding;
+
+      //check if new textbox would overlap with previous textboxes drawn
+      while( textboxlocations.some(box => IOU(box, [x,y,x+w,y+h]) > 0.01) ) {
+        //if so, move the textbox up by h + 5 pixels
+        y -= h + 3;
+        
+      }
+      //don't let the textbox go beyond top of the image
+      if( y <= 0 ) {
+          y = 0;
+      }
+
+      textboxlocations.push([x-1,y-1,x+w+1,y+h+1]);
+      // draw text background box
+      ctx.fillRect(x,y,w,h);
+
+      //draw text
+      ctx.fillStyle = 'black';
+      ctx.fillText(label, x + padding, y + h - padding);
+
+      //draw line between text and bbox top left corner
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x, item['bbox'][1]);
+      ctx.stroke();     
+    };
+  }
+
+  function IOU(boxA, boxB, isPixel = 0) {
+    /*This function computes the IOU of 2 boxes.
+    This is used solely to make sure bbox labels don't overlap vertically */
+    
+    // determine the (x, y)-coordinates of the intersection rectangle
+    xA = Math.max(boxA[0], boxB[0])
+    yA = Math.max(boxA[1], boxB[1])
+    xB = Math.min(boxA[2], boxB[2])
+    yB = Math.min(boxA[3], boxB[3])
+ 
+    if(xA >= xB || yA >= yB){
+      return 0;
+    }
+ 
+    //compute the area of intersection rectangle
+    interArea = (xB - xA + isPixel) * (yB - yA + isPixel)
+
+    //compute the area of both rectangles
+    boxAArea = (boxA[2] - boxA[0] + isPixel) * (boxA[3] - boxA[1] + isPixel)
+    boxBArea = (boxB[2] - boxB[0] + isPixel) * (boxB[3] - boxB[1] + isPixel)
+
+    // compute the intersection over union by taking the intersection
+    // area and dividing it by the sum of areas - the interesection area
+    iou = interArea / (boxAArea + boxBArea - interArea)
+    return iou
+  }
+ 
+  function do_rounding(num, places = 2) {
+    return Math.round((num + Number.EPSILON) * (10 ** places) ) / (10 ** places);
+  }
+
+</script>
+
+
+<script type="text/javascript">
+  /*This script block handles the drag and drop + AJAX request to server */
+
+  // where files are dropped + file selector is opened
+  var dropRegion = document.getElementById("drop-region");
+
+  // open file selector when clicked on the drop region
+  var fakeInput = document.createElement("input");
+  fakeInput.type = "file";
+  fakeInput.accept = "image/*";
+  fakeInput.multiple = false; //dont allow multiple file upload
+  dropRegion.addEventListener('click', function() {
+      fakeInput.click();
+  });
+
+  function validateImage(image) {
+    // check the type
+    var validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (validTypes.indexOf( image.type ) === -1) {
+        alert("Invalid File Type");
+        return false;
+    }
+
+    // check the size
+    var maxSizeInBytes = 10e6; // 10MB
+    if (image.size > maxSizeInBytes) {
+        alert("File too large");
+        return false;
+    }
+
+    return true;
+  }
+
+  function handleFiles(files) {
+    for (var i = 0, len = files.length; i < len; i++) {
+        if (validateImage(files[i]))
+            previewAnduploadImage(files[i]);
+    }
+  }
+  
+  fakeInput.addEventListener("change", function() {
+    var files = fakeInput.files;
+    handleFiles(files);
+  });
+  function preventDefault(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  dropRegion.addEventListener('dragenter', preventDefault, false);
+  dropRegion.addEventListener('dragleave', preventDefault, false);
+  dropRegion.addEventListener('dragover', preventDefault, false);
+  dropRegion.addEventListener('drop', preventDefault, false);
+
+  function handleDrop(e) {
+    var data = e.dataTransfer,
+        files = data.files;
+
+    handleFiles(files)      
+  }
+
+  dropRegion.addEventListener('drop', handleDrop, false);
+
+  function handleDrop(e) {
+    var data = e.dataTransfer,
+        files = data.files;
+
+    handleFiles(files)      
+  }
+
+  dropRegion.addEventListener('drop', handleDrop, false);
+
+  function handleDrop(e) {
+    var dt = e.dataTransfer,
+        files = dt.files;
+
+    if (files.length) {
+        handleFiles(files);
+    } else {
+        // check for img
+        var html = dt.getData('text/html'),
+            match = html && /\bsrc="?([^"\s]+)"?\s*/.exec(html),
+            url = match && match[1];
+
+        if (url) {
+            uploadImageFromURL(url);
+            return;
+        }
+    }
+
+    function uploadImageFromURL(url) {
+        var img = new Image;
+        var c = document.createElement("canvas");
+        var ctx = c.getContext("2d");
+
+        img.onload = function() {
+            c.width = this.naturalWidth;     // update canvas size to match image
+            c.height = this.naturalHeight;
+            ctx.drawImage(this, 0, 0);       // draw in image
+            c.toBlob(function(blob) {        // get content as PNG blob
+
+                // call our main function
+                handleFiles( [blob] );
+
+            }, "image/png");
+        };
+        img.onerror = function() {
+            alert("Error in uploading");
+        }
+        img.crossOrigin = "";              // if from different origin
+        img.src = url;
+    }
+  }
+
+  function previewAnduploadImage(img) {
+      /* This function reads the user's image, AJAX requests it to the server, 
+      JSON parses the result and draws the image onto the canvas. 
+
+      The bboxes are drawn in drawImageWithBBoxes() which get run after
+      image is drawn on the canvas.     */
+
+      // read the image...
+      var reader = new FileReader();
+      reader.onload = function(e) {
+          image.src = e.target.result;
+      }
+
+      // create FormData
+      var formData = new FormData();
+      formData.append('file_list', img);
+      formData.append('model_name', $('#model_name').val());
+      formData.append('img_size', $('#img_size').val());
+
+      $.ajax({
+        url: '/detect',
+        data: formData,
+        processData: false,
+        contentType: false,
+        type: 'POST',
+        success: function(json_result_data){
+          json_result_data = json_result_data.replaceAll("'",'"');
+          data = JSON.parse(json_result_data)[0]; //read json result of YOLO
+
+          //read the image, triggers image to load on canvas and bbox's to be drawn
+          reader.readAsDataURL(img); 
+        },
+        error: function(xhr, ajaxOptions, thrownError){
+                  alert("Error code " + xhr.status + ": " + thrownError + '\nMessage: ' + JSON.parse(xhr.responseText)['message']);
+              },
+      });
+  }
+</script>
+{% endblock %}

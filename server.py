@@ -32,8 +32,17 @@ def home(request: Request):
             "model_selection_options": model_selection_options,
         })
 
+@app.get("/drag_and_drop_detect")
+def drag_and_drop_detect(request: Request):
+    ''' drag_and_drop_detect detect page. Uses a drag and drop
+    file interface to upload files to the server, then renders 
+    the image + bboxes + labels on HTML canvas.
     '''
 
+    return templates.TemplateResponse('drag_and_drop_detect.html', 
+            {"request": request,
+            "model_selection_options": model_selection_options,
+        })
 
 
 ##############################################

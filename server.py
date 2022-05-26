@@ -14,7 +14,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory = 'templates')
 
 model_selection_options = ['yolov5s','yolov5m','yolov5l','yolov5x','yolov5n',
-                            'yolov5n6','yolov5s6','yolov5m6','yolov5l6','yolov5x6']
+                        'yolov5n6','yolov5s6','yolov5m6','yolov5l6','yolov5x6']
 model_dict = {model_name: None for model_name in model_selection_options} #set up model cache
 
 colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)] #for bbox plotting
@@ -24,8 +24,7 @@ colors = [tuple([random.randint(0, 255) for _ in range(3)]) for _ in range(100)]
 ##############################################
 @app.get("/")
 def home(request: Request):
-    '''
-    Returns html jinja2 template render for home page form
+    ''' Returns html jinja2 template render for home page form
     '''
 
     return templates.TemplateResponse('home.html', {
@@ -33,15 +32,8 @@ def home(request: Request):
             "model_selection_options": model_selection_options,
         })
 
-
-@app.get("/about")
-def about_us(request: Request):
-    '''
-    Display about us page
     '''
 
-    return templates.TemplateResponse('about.html', 
-            {"request": request})
 
 
 ##############################################
@@ -114,9 +106,9 @@ def detect_via_api(request: Request,
 
     if model_dict[model_name] is None:
         model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
-
+    
     img_batch = [cv2.imdecode(np.fromstring(file.file.read(), np.uint8), cv2.IMREAD_COLOR)
-                    for file in file_list]
+                for file in file_list]
 
     #create a copy that corrects for cv2.imdecode generating BGR images instead of RGB, 
     #using cvtColor instead of [...,::-1] to keep array contiguous in RAM
@@ -135,7 +127,8 @@ def detect_via_api(request: Request,
             payload = {'image_base64':base64EncodeImage(img)}
             json_results[idx].append(payload)
 
-    return json_results
+    encoded_json_results = str(json_results).replace("'",r'"')
+    return encoded_json_results
     
 ##############################################
 #--------------Helper Functions---------------

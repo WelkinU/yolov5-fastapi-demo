@@ -14,7 +14,7 @@ pip install -r requirements.txt
 
 ## Inference
 
-You can initialize the server with `python server.py` or `uvicorn server:app --reload`
+You can initialize the server with `python server.py` (use `--help` for other args) or `uvicorn server:app --reload`
 
 You can test the server a couple of ways:
 1. Using `client.py` - this is a basic example of using the Requests library to upload a batch of images + model name to `localhost:8000/detect/` and receive JSON inference results. 

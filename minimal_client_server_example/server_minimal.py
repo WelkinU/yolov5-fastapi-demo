@@ -8,9 +8,7 @@ Works with client_minimal.py
 
 This script does not require any of the HTML templates in /templates or other code in this repo
 and does not involve stuff like Bootstrap, Javascript, JQuery, etc.
-
 '''
-
 
 from fastapi import FastAPI, Request, Form, File, UploadFile
 from fastapi.responses import HTMLResponse
@@ -56,6 +54,9 @@ async def process_home_form(file: UploadFile = File(...),
     Requires an image file upload, model name (ex. yolov5s).
     Returns: json response with list of list of dicts.
       Each dict contains class, class_name, confidence, normalized_bbox
+
+    Note: Because this is an async method, the YOLO inference is a blocking
+    operation.
     '''
 
     model = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True, force_reload = False)

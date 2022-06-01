@@ -2,7 +2,7 @@
 
 This is a demo FastAPI app that allows a user to upload image(s), perform inference using a pretrained YOLOv5 model, and receive results in JSON format. This repo also includes Jinja2 HTML templates, so you can access this interface through a web browser at `localhost:8000`.
 
-<img src="https://user-images.githubusercontent.com/47000850/171301696-fe31b6fd-a2c4-4b2c-9029-f11ce1ddfb64.png" alt="image" width="630"/>
+<img src="https://user-images.githubusercontent.com/47000850/171301696-fe31b6fd-a2c4-4b2c-9029-f11ce1ddfb64.png" alt="image" width="700"/>
 
 ## Install Requirements
 Python 3.8 or later with all requirements.txt dependencies installed, including torch>=1.7 (per https://github.com/ultralytics/yolov5).
@@ -31,7 +31,7 @@ You can test the server a couple of ways:
 
 Models will automatically be downloaded the first time they are used and are cached on disc.
 
-<img src="https://user-images.githubusercontent.com/47000850/171300877-e3941e01-1aa0-4816-9cf9-6947481b4ec8.png" alt="city_street_results" width="630"/>
+<img src="https://user-images.githubusercontent.com/47000850/171300877-e3941e01-1aa0-4816-9cf9-6947481b4ec8.png" alt="city_street_results" width="700"/>
 
 ## API Documentation
 API endpoint documentation is auto-generated in `localhost:8000/docs`. The general idea is that humans use the "/" route (HTML form + inference results displayed in the browser) and programs use the "/detect/" API route to receive JSON inference results.

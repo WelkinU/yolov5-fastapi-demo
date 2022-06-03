@@ -49,18 +49,25 @@ def drag_and_drop_detect(request: Request):
 #------------POST Request Routes--------------
 ##############################################
 @app.post("/")
-def detect_via_web_form(request: Request,
+def detect_with_server_side_rendering(request: Request,
                         file_list: List[UploadFile] = File(...), 
                         model_name: str = Form(...),
                         img_size: int = Form(640)):
     
     '''
     Requires an image file upload, model name (ex. yolov5s). Optional image size parameter (Default 640).
-    Intended for human (non-api) users.
+
     Returns: HTML template render showing bbox data and base64 encoded image
+
+    Notes: 
+    Intended to show how to do server sided image rendering + passing to client. But
+    generally, you will just want to return results as JSON and do the rendering client side.
+    See templates/drag_and_drop_detect.html for an example on how to do this.
+
+    If you just want JSON results, just return the results of the 
+    results_to_json() function and skip the rest
     '''
 
-    #assume input validated properly if we got here
     if model_dict[model_name] is None:
         model_dict[model_name] = torch.hub.load('ultralytics/yolov5', model_name, pretrained=True)
 
@@ -107,7 +114,8 @@ def detect_via_api(request: Request,
     Optional image size parameter (Default 640)
     Optional download_image parameter that includes base64 encoded image(s) with bbox's drawn in the json response
     
-    Returns: JSON results of running YOLOv5 on the uploaded image. If download_image parameter is True, images with
+    Returns: JSON results of running YOLOv5 on the uploaded image. Bbox format is X1Y1X2Y2. 
+            If download_image parameter is True, images with
             bboxes drawn are base64 encoded and returned inside the json response.
 
     Intended for API usage.

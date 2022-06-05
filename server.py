@@ -135,6 +135,7 @@ def detect_via_api(request: Request,
     json_results = results_to_json(results,model_dict[model_name])
 
     if download_image:
+        #server side render the image with bounding boxes
         for idx, (img, bbox_list) in enumerate(zip(img_batch, json_results)):
             for bbox in bbox_list:
                 label = f'{bbox["class_name"]} {bbox["confidence"]:.2f}'
